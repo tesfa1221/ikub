@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { query, queryOne, execute } from '../database/connection';
+import { query, rawQuery, queryOne, execute } from '../database/connection';
 import { createError } from '../middleware/errorHandler';
 
 export class ApplicationService {
@@ -18,9 +18,9 @@ export class ApplicationService {
     const conditions: string[] = ["i.status IN ('pending','active')"];
     const params: any[] = [];
 
-    if (filters?.schedule) { conditions.push('i.schedule = ?'); params.push(filters.schedule); }
-    if (filters?.minAmount) { conditions.push('i.contribution_amount >= ?'); params.push(filters.minAmount); }
-    if (filters?.maxAmount) { conditions.push('i.contribution_amount <= ?'); params.push(filters.maxAmount); }
+    if (filters?.schedule)  { conditions.push('i.schedule = ?');               params.push(filters.schedule); }
+    if (filters?.minAmount) { conditions.push('i.contribution_amount >= ?');    params.push(filters.minAmount); }
+    if (filters?.maxAmount) { conditions.push('i.contribution_amount <= ?');    params.push(filters.maxAmount); }
     if (filters?.search) {
       conditions.push('(i.name LIKE ? OR i.description LIKE ?)');
       params.push(`%${filters.search}%`, `%${filters.search}%`);
@@ -28,27 +28,39 @@ export class ApplicationService {
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
-    const ikubs = await query(
-      `SELECT
-         i.id, i.name, i.description, i.contribution_amount,
+    // Use rawQuery (non-prepared) for dynamic WHERE — avoids MariaDB prepared stmt issues
+    const ikubs = await rawQuery(
+      `SELECT i.id, i.name, i.description, i.contribution_amount,
          i.schedule, i.max_members, i.total_rounds, i.current_round,
-         i.status, i.start_date, i.created_at,
-         (SELECT COUNT(*) FROM members m WHERE m.ikub_id = i.id AND m.is_active = TRUE) as member_count,
-         (i.max_members - (SELECT COUNT(*) FROM members m WHERE m.ikub_id = i.id AND m.is_active = TRUE)) as spots_left,
-         (SELECT COUNT(*) FROM applications a WHERE a.ikub_id = i.id AND a.status = 'pending') as pending_applications
+         i.status, i.start_date, i.created_at
        FROM ikubs i
        ${whereClause}
        ORDER BY i.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
-    );
-
-    const [{ total }] = await query(
-      `SELECT COUNT(*) as total FROM ikubs i ${whereClause}`,
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
       params
     );
 
-    return { ikubs, total };
+    const countRows = await rawQuery(
+      `SELECT COUNT(*) as total FROM ikubs i ${whereClause}`,
+      params
+    );
+    const total = countRows[0]?.total || 0;
+
+    // Enrich each ikub with member count separately (avoid complex joins)
+    const enriched = await Promise.all(ikubs.map(async (ikub: any) => {
+      const [mc] = await query(
+        'SELECT COUNT(*) as cnt FROM members WHERE ikub_id = ? AND is_active = TRUE',
+        [ikub.id]
+      );
+      const memberCount = parseInt(mc.cnt) || 0;
+      return {
+        ...ikub,
+        member_count: memberCount,
+        spots_left: Math.max(0, ikub.max_members - memberCount),
+      };
+    }));
+
+    return { ikubs: enriched, total };
   }
 
   /**
@@ -230,10 +242,9 @@ export class ApplicationService {
    * Admin: get all pending/all applications for an ikub with trust scores.
    */
   async getApplicationsForIkub(ikubId: string, status?: string) {
-    const whereStatus = status ? 'AND a.status = ?' : '';
-    const params = status ? [ikubId, status] : [ikubId];
+    const whereStatus = status ? `AND a.status = '${status}'` : '';
 
-    return query(
+    return rawQuery(
       `SELECT a.*, u.name as user_name, u.telegram_id, u.phone, u.created_at as user_since,
          (SELECT COUNT(*) FROM payments p JOIN members m ON m.id = p.member_id WHERE m.user_id = a.user_id AND p.status = 'approved') as approved_payments,
          (SELECT COUNT(*) FROM payments p JOIN members m ON m.id = p.member_id WHERE m.user_id = a.user_id AND p.status = 'rejected') as rejected_payments,
@@ -242,7 +253,7 @@ export class ApplicationService {
        JOIN users u ON u.id = a.user_id
        WHERE a.ikub_id = ? ${whereStatus}
        ORDER BY a.created_at DESC`,
-      params
+      [ikubId]
     );
   }
 

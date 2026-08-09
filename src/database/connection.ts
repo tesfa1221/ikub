@@ -49,6 +49,12 @@ export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> 
   return rows as T[];
 }
 
+// rawQuery uses pool.query (not prepared statements) — needed for dynamic WHERE clauses on MariaDB
+export async function rawQuery<T = any>(sql: string, params?: any[]): Promise<T[]> {
+  const [rows] = await pool.query(sql, params);
+  return rows as T[];
+}
+
 export async function queryOne<T = any>(sql: string, params?: any[]): Promise<T | null> {
   const rows = await query<T>(sql, params);
   return rows[0] || null;
