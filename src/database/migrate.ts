@@ -187,6 +187,26 @@ CREATE TABLE IF NOT EXISTS device_tokens (
   last_sync TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Applications table (public marketplace apply-to-join)
+CREATE TABLE IF NOT EXISTS applications (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  ikub_id VARCHAR(36) NOT NULL,
+  message TEXT,
+  status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+  reviewed_by VARCHAR(36) NULL,
+  reviewed_at TIMESTAMP NULL,
+  rejection_reason TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_application (user_id, ikub_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (ikub_id) REFERENCES ikubs(id) ON DELETE CASCADE,
+  FOREIGN KEY (reviewed_by) REFERENCES admins(id),
+  INDEX idx_ikub_id (ikub_id),
+  INDEX idx_user_id (user_id),
+  INDEX idx_status (status)
+);
 `;
 
 async function migrate() {
