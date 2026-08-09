@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: smartikub-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # All secrets below → set manually in Render dashboard
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL_CA
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: ADMIN_JWT_SECRET
+        sync: false
+      - key: ADMIN_JWT_EXPIRES_IN
+        value: 24h
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ANDROID_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false

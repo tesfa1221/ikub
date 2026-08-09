@@ -1,0 +1,9 @@
+node_modules/
+dist/
+logs/
+.env
+.env.production
+ca.pem
+*.pem
+*.key
+*.crt
