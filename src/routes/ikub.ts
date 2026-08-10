@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { ikubController } from '../controllers/ikubController';
-import { authenticateUser, authenticateAdmin } from '../middleware/auth';
+import { authenticateUser, authenticateAdmin, authenticateAny } from '../middleware/auth';
 
 const router = Router();
 
@@ -11,9 +11,9 @@ router.get('/stats', authenticateAdmin, ikubController.getDashboardStats.bind(ik
 router.get('/me/all', authenticateUser, ikubController.getMyIkubs.bind(ikubController));
 router.get('/:id', ikubController.getById.bind(ikubController));
 // Members of a group — accessible by members of that group AND admins
-router.get('/:id/members', authenticateUser, ikubController.getMembers.bind(ikubController));
+router.get('/:id/members', authenticateAny, ikubController.getMembers.bind(ikubController));
 // Round payment status visible to any authenticated member
-router.get('/:id/round-status', authenticateUser, ikubController.getRoundStatus.bind(ikubController));
+router.get('/:id/round-status', authenticateAny, ikubController.getRoundStatus.bind(ikubController));
 router.post('/join', authenticateUser, ikubController.join.bind(ikubController));
 
 // Admin routes

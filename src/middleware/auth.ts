@@ -64,6 +64,35 @@ export function authenticateAdmin(req: AuthRequest, _res: Response, next: NextFu
   }
 }
 
+/**
+ * Accepts either a member token OR an admin token.
+ * Used for routes accessible to both (e.g. viewing group members).
+ */
+export function authenticateAny(req: AuthRequest, _res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    next(createError('No token provided', 401));
+    return;
+  }
+  const token = authHeader.split(' ')[1];
+
+  // Try user token first
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    req.user = decoded;
+    return next();
+  } catch { /* try admin next */ }
+
+  // Try admin token
+  try {
+    const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET!) as any;
+    req.admin = decoded;
+    return next();
+  } catch {
+    next(createError('Invalid token', 401));
+  }
+}
+
 export function requireSuperAdmin(req: AuthRequest, _res: Response, next: NextFunction): void {
   if (req.admin?.role !== 'super_admin') {
     next(createError('Super admin access required', 403));
