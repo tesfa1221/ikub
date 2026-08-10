@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { query, queryOne, execute } from '../database/connection';
+import { query, rawQuery, queryOne, execute } from '../database/connection';
 import { createError } from '../middleware/errorHandler';
 
 export class IkubService {
@@ -44,24 +44,24 @@ export class IkubService {
 
   async getAllIkubs(page = 1, limit = 20, status?: string) {
     const offset = (page - 1) * limit;
-    const whereClause = status ? 'WHERE i.status = ?' : '';
-    const params = status ? [status, limit, offset] : [limit, offset];
+    const whereClause = status ? "WHERE i.status = ?" : '';
+    const countParams = status ? [status] : [];
 
-    const ikubs = await query(
-      `SELECT i.*, 
+    const ikubs = await rawQuery(
+      `SELECT i.*,
         (SELECT COUNT(*) FROM members m WHERE m.ikub_id = i.id AND m.is_active = TRUE) as member_count
        FROM ikubs i ${whereClause}
        ORDER BY i.created_at DESC
-       LIMIT ? OFFSET ?`,
-      params
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      countParams
     );
 
-    const [{ total }] = await query(
-      `SELECT COUNT(*) as total FROM ikubs ${whereClause}`,
-      status ? [status] : []
+    const countRows = await rawQuery(
+      `SELECT COUNT(*) as total FROM ikubs i ${whereClause}`,
+      countParams
     );
 
-    return { ikubs, total };
+    return { ikubs, total: countRows[0]?.total || 0 };
   }
 
   async updateIkub(id: string, data: Partial<{

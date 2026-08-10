@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { query, queryOne, execute } from '../database/connection';
+import { query, rawQuery, queryOne, execute } from '../database/connection';
 import { createError } from '../middleware/errorHandler';
 
 export class PaymentService {
@@ -128,7 +128,7 @@ export class PaymentService {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const payments = await query(
+    const payments = await rawQuery(
       `SELECT p.*, u.name as member_name, i.name as ikub_name
        FROM payments p
        JOIN members m ON m.id = p.member_id
@@ -136,11 +136,11 @@ export class PaymentService {
        JOIN ikubs i ON i.id = p.ikub_id
        ${whereClause}
        ORDER BY p.submitted_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      params
     );
 
-    const [{ total }] = await query(
+    const countRows = await rawQuery(
       `SELECT COUNT(*) as total FROM payments p
        JOIN members m ON m.id = p.member_id
        JOIN users u ON u.id = m.user_id
@@ -149,7 +149,7 @@ export class PaymentService {
       params
     );
 
-    return { payments, total };
+    return { payments, total: countRows[0]?.total || 0 };
   }
 
   async getMemberPayments(userId: string, ikubId?: string) {

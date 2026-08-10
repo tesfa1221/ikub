@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { query, queryOne, execute } from '../database/connection';
+import { query, rawQuery, queryOne, execute } from '../database/connection';
 import { createError } from '../middleware/errorHandler';
 
 export class DrawService {
@@ -89,19 +89,18 @@ export class DrawService {
   async getAllDraws(page = 1, limit = 20) {
     const offset = (page - 1) * limit;
 
-    const draws = await query(
+    const draws = await rawQuery(
       `SELECT d.*, i.name as ikub_name, u.name as winner_name
        FROM draws d
        JOIN ikubs i ON i.id = d.ikub_id
        JOIN members m ON m.id = d.winner_member_id
        JOIN users u ON u.id = m.user_id
        ORDER BY d.draw_date DESC
-       LIMIT ? OFFSET ?`,
-      [limit, offset]
+       LIMIT ${Number(limit)} OFFSET ${Number(offset)}`
     );
 
-    const [{ total }] = await query('SELECT COUNT(*) as total FROM draws');
-    return { draws, total };
+    const countRows = await query('SELECT COUNT(*) as total FROM draws');
+    return { draws, total: countRows[0]?.total || 0 };
   }
 
   async getUpcomingDraw(ikubId: string) {
