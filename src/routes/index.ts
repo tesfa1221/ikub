@@ -7,6 +7,7 @@ import androidRoutes from './android';
 import reportRoutes from './report';
 import reminderRoutes from './reminder';
 import marketplaceRoutes from './marketplace';
+import userRoutes from './users';
 
 export function setupRoutes(app: Express): void {
   app.get('/health', (_req, res) => {
@@ -21,6 +22,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/reports', reportRoutes);
   app.use('/api/reminders', reminderRoutes);
   app.use('/api/marketplace', marketplaceRoutes);
+  app.use('/api/users', userRoutes);
 
   app.use((_req, res) => {
     res.status(404).json({ success: false, message: 'Route not found' });

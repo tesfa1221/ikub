@@ -10,8 +10,9 @@ router.get('/', ikubController.getAll.bind(ikubController));
 router.get('/stats', authenticateAdmin, ikubController.getDashboardStats.bind(ikubController));
 router.get('/me/all', authenticateUser, ikubController.getMyIkubs.bind(ikubController));
 router.get('/:id', ikubController.getById.bind(ikubController));
-router.get('/:id/members', authenticateAdmin, ikubController.getMembers.bind(ikubController));
-// Feature 8: round payment status visible to any authenticated member
+// Members of a group — accessible by members of that group AND admins
+router.get('/:id/members', authenticateUser, ikubController.getMembers.bind(ikubController));
+// Round payment status visible to any authenticated member
 router.get('/:id/round-status', authenticateUser, ikubController.getRoundStatus.bind(ikubController));
 router.post('/join', authenticateUser, ikubController.join.bind(ikubController));
 
