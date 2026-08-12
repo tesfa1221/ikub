@@ -148,6 +148,19 @@ export class IkubService {
     );
   }
 
+  async deleteIkub(id: string): Promise<void> {
+    const ikub = await this.getIkubById(id);
+    if (ikub.status === 'active' && ikub.current_round > 0) {
+      throw createError('Cannot delete an active Ikub that has started rounds. Pause it first.', 400);
+    }
+    // Delete in order: payments, members, draws, applications, ikub
+    await execute('DELETE FROM applications WHERE ikub_id = ?', [id]);
+    await execute('DELETE FROM payments WHERE ikub_id = ?', [id]);
+    await execute('DELETE FROM draws WHERE ikub_id = ?', [id]);
+    await execute('DELETE FROM members WHERE ikub_id = ?', [id]);
+    await execute('DELETE FROM ikubs WHERE id = ?', [id]);
+  }
+
   async generateNewInvitationCode(ikubId: string): Promise<string> {
     const code = 'IKUB' + Math.random().toString(36).substring(2, 8).toUpperCase();
     await execute('UPDATE ikubs SET invitation_code = ? WHERE id = ?', [code, ikubId]);

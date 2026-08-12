@@ -30,6 +30,7 @@ router.post('/',
 );
 
 router.put('/:id', authenticateAdmin, ikubController.update.bind(ikubController));
+router.delete('/:id', authenticateAdmin, ikubController.deleteIkub.bind(ikubController));
 router.post('/:id/invite-code', authenticateAdmin, ikubController.generateInviteCode.bind(ikubController));
 
 export default router;

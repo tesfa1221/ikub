@@ -91,6 +91,16 @@ export class IkubController {
     }
   }
 
+  async deleteIkub(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await ikubService.deleteIkub(req.params.id);
+      await auditLog(req.admin!.id, 'admin', 'DELETE_IKUB', 'ikub', req.params.id, {}, req.ip);
+      successResponse(res, null, 'Ikub deleted successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async generateInviteCode(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const code = await ikubService.generateNewInvitationCode(req.params.id);
