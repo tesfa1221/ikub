@@ -30,13 +30,13 @@ export class ApplicationController {
   // GET /api/marketplace/:ikubId — public ikub detail
   async getPublicIkubDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { query } = await import('../database/connection');
-      const rows = await query(
+      const { rawQuery } = await import('../database/connection');
+      const rows = await rawQuery(
         `SELECT i.id, i.name, i.description, i.contribution_amount, i.schedule,
            i.max_members, i.total_rounds, i.current_round, i.status, i.start_date,
            (SELECT COUNT(*) FROM members m WHERE m.ikub_id = i.id AND m.is_active = TRUE) as member_count,
-           (i.max_members - (SELECT COUNT(*) FROM members m WHERE m.ikub_id = i.id AND m.is_active = TRUE)) as spots_left
-         FROM ikubs i WHERE i.id = ? AND i.status IN ('pending','active')`,
+           (i.max_members - (SELECT COUNT(*) FROM members m2 WHERE m2.ikub_id = i.id AND m2.is_active = TRUE)) as spots_left
+         FROM ikubs i WHERE i.id = ?`,
         [req.params.ikubId]
       );
       if (!rows[0]) { errorResponse(res, 'Ikub not found', 404); return; }
